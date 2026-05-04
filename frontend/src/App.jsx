@@ -7,16 +7,20 @@ import DashboardPage from './pages/DashboardPage';
 import './index.css';
 
 const ProtectedRoute = ({ children }) => {
-  const { token } = useAuth();
-  return token ? children : <Navigate to="/login" />;
+  const { user, loading } = useAuth();
+  if (loading) return null; // or a loader component
+  return user ? children : <Navigate to="/login" />;
 };
 
 function AppContent() {
-  const { token } = useAuth();
+  const { user, loading } = useAuth();
+
+  // While checking session, don't render routes
+  if (loading) return null;
 
   return (
     <Routes>
-      {!token ? (
+      {!user ? (
         <>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />

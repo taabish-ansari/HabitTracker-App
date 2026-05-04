@@ -1,59 +1,121 @@
-const pool = require('../db');
+const { supabaseAdmin } = require('../supabase');
 
-class Habit {
-  static async create(userId, name, category, difficulty_weight, color) {
-    const result = await pool.run(
-      'INSERT INTO habits (user_id, name, category, difficulty_weight, color) VALUES (?, ?, ?, ?, ?)',
-      [userId, name, category, difficulty_weight, color]
-    );
-    
-    const habit = await pool.get('SELECT * FROM habits WHERE id = ?', [result.lastInsertRowid]);
-    
-    // Create streak record for new habit
-    await pool.run(
-      'INSERT INTO streaks (habit_id, current_streak, longest_streak) VALUES (?, 0, 0)',
-      [habit.id]
-    );
-    
-    return habit;
-  }
+const Habit = {
+  async create(userId, name, category, difficulty_weight, color) {
+    const { data, error } = await supabaseAdmin
+      .from('habits')
+      .insert({
+        user_id: userId,
+        name,
+        category,
+        difficulty_weight,
+        color,
+      })
+      .select()
+      .single();
 
-  static async findByUserId(userId) {
-    const result = await pool.all(
-      'SELECT * FROM habits WHERE user_id = ? ORDER BY created_at DESC',
-      [userId]
-    );
-    return result;
-  }
+    if (error) throw error;
 
-  static async findById(id) {
-    const result = await pool.get('SELECT * FROM habits WHERE id = ?', [id]);
-    return result;
-  }
+    // Create streak entry for the new habit
+    const streakPayloads = [
+      {
+        habit_id: data.id,
+        current_streak: 0,
+        best_streak: 0,
+      },
+      {
+        habit_id: data.id,
+        current_streak: 0,
+        longest_streak: 0,
+      },
+    ];
 
-  static async update(id, name, category, difficulty_weight, color) {
-    await pool.run(
-      'UPDATE habits SET name = ?, category = ?, difficulty_weight = ?, color = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [name, category, difficulty_weight, color, id]
-    );
-    return await pool.get('SELECT * FROM habits WHERE id = ?', [id]);
-  }
+    let streakError = null;
+    for (const payload of streakPayloads) {
+      const { error: insertError } = await supabaseAdmin
+        .from('streaks')
+        .insert(payload);
 
-  static async delete(id) {
-    await pool.run('DELETE FROM habits WHERE id = ?', [id]);
-  }
+      if (!insertError) {
+        streakError = null;
+        break;
+      }
 
-  static async getWithStreaks(userId) {
-    const result = await pool.all(
-      `SELECT h.*, s.current_streak, s.longest_streak, s.last_completed_date
-       FROM habits h
-       LEFT JOIN streaks s ON h.id = s.habit_id
-       WHERE h.user_id = ?
-       ORDER BY h.created_at DESC`,
-      [userId]
-    );
-    return result;
-  }
-}
+      streakError = insertError;
+    }
+
+    if (streakError) throw streakError;
+
+    return data;
+  },
+
+  async findByUserId(userId) {
+    const { data, error } = await supabaseAdmin
+      .from('habits')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  },
+
+  async findById(id) {
+    const { data, error } = await supabaseAdmin
+      .from('habits')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id, name, category, difficulty_weight, color) {
+    const { data, error } = await supabaseAdmin
+      .from('habits')
+      .update({
+        name,
+        category,
+        difficulty_weight,
+        color,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async delete(id) {
+    const { error } = await supabaseAdmin
+      .from('habits')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
+  },
+
+  async getWithStreaks(userId) {
+    const { data, error } = await supabaseAdmin
+      .from('habits')
+      .select(`
+        *,
+        streaks (
+          id,
+          current_streak,
+          last_completed_date
+        )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  },
+};
 
 module.exports = Habit;

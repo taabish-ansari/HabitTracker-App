@@ -11,7 +11,7 @@ const DashboardPage = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [activeTab, setActiveTab] = useState('calendar');
-  const { habits, fetchHabits } = useHabits();
+  const { habits, loading: habitsLoading, error: habitsError, addHabit, updateHabit, deleteHabit, fetchHabits } = useHabits();
   const { isDark, toggleTheme } = useTheme();
   const { logout } = useAuth();
 
@@ -21,10 +21,21 @@ const DashboardPage = () => {
 
   const { logs, logHabit, fetchLogs } = useHabitLogs(startDate, endDate);
 
+  const handleAddHabit = async (formData) => {
+    await addHabit(formData.name, formData.category, formData.difficulty_weight, formData.color);
+  };
+
+  const handleUpdateHabit = async (id, formData) => {
+    await updateHabit(id, formData);
+  };
+
+  const handleDeleteHabit = async (id) => {
+    await deleteHabit(id);
+  };
+
   const handleToggleHabit = async (habitId, date, completed) => {
     try {
       await logHabit(habitId, date, completed);
-      await fetchHabits();
     } catch (err) {
       console.error('Failed to log habit:', err);
     }
@@ -101,16 +112,6 @@ const DashboardPage = () => {
             📅 Calendar
           </button>
           <button
-            onClick={() => setActiveTab('habits')}
-            className={`px-6 py-3 font-medium transition ${
-              activeTab === 'habits'
-                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-            }`}
-          >
-            ✨ Habits
-          </button>
-          <button
             onClick={() => setActiveTab('analytics')}
             className={`px-6 py-3 font-medium transition ${
               activeTab === 'analytics'
@@ -128,7 +129,7 @@ const DashboardPage = () => {
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
             }`}
           >
-            🏆 Gamification
+            ⭐ Points
           </button>
         </div>
 
@@ -157,19 +158,29 @@ const DashboardPage = () => {
               </button>
             </div>
 
-            {/* Calendar Grid */}
-            <CalendarGrid
-              habits={habits}
-              logs={logs}
-              onToggleHabit={handleToggleHabit}
-              currentMonth={currentMonth}
-              currentYear={currentYear}
-            />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4 lg:mt-8">
+                  <div className="lg:col-span-1 lg:sticky lg:top-6 self-start">
+                    <HabitManager
+                      habits={habits}
+                      addHabit={handleAddHabit}
+                      updateHabit={(id, data) => handleUpdateHabit(id, data)}
+                      deleteHabit={handleDeleteHabit}
+                      loading={habitsLoading}
+                      error={habitsError}
+                    />
+                  </div>
+                  <div className="lg:col-span-2 space-y-6">
+                    <CalendarGrid
+                      habits={habits}
+                      logs={logs}
+                      onToggleHabit={handleToggleHabit}
+                      currentMonth={currentMonth}
+                      currentYear={currentYear}
+                    />
+                  </div>
+                </div>
           </div>
         )}
-
-        {/* Habits Tab */}
-        {activeTab === 'habits' && <HabitManager />}
 
         {/* Analytics Tab */}
         {activeTab === 'analytics' && <AnalyticsDashboard habits={habits} logs={logs} />}

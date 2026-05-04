@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
-import { useHabits } from '../hooks/useHabits';
 import HabitForm from './HabitForm';
 
-const HabitManager = () => {
-  const { habits, addHabit, updateHabit, deleteHabit, loading, error } = useHabits();
+const HabitManager = ({
+  habits = [],
+  addHabit,
+  updateHabit,
+  deleteHabit,
+  loading = false,
+  error = null,
+} = {}) => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
@@ -41,12 +46,12 @@ const HabitManager = () => {
 
   return (
     <div className="space-y-4">
-      {error && <div className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 p-3 rounded">{error}</div>}
+      {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-800 shadow-sm dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</div>}
 
       {!showForm && !editingId ? (
         <button
           onClick={() => setShowForm(true)}
-          className="bg-green-500 dark:bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-600 dark:hover:bg-green-700 transition"
+          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3 font-semibold text-white shadow-lg shadow-emerald-500/20 transition hover:translate-y-[-1px] hover:from-emerald-400 hover:to-teal-400"
         >
           ➕ Add New Habit
         </button>
@@ -67,36 +72,36 @@ const HabitManager = () => {
         />
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
         {habits.map((habit) => (
-          <div key={habit.id} className="habit-card">
+          <div key={habit.id} className="rounded-2xl border border-gray-200 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-gray-800 dark:bg-gray-900/70">
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <div
-                  className="w-4 h-4 rounded"
+                  className="w-4 h-4 rounded-full ring-2 ring-white/70 dark:ring-gray-900"
                   style={{ backgroundColor: habit.color }}
                 />
-                <h3 className="font-semibold">{habit.name}</h3>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{habit.name}</h3>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                 {habit.category} • Weight: {habit.difficulty_weight}
               </p>
               {habit.current_streak > 0 && (
-                <p className="text-sm text-orange-600 dark:text-orange-400 font-semibold mt-1">
+                <p className="mt-2 text-sm font-semibold text-orange-600 dark:text-orange-400">
                   🔥 {habit.current_streak} day streak
                 </p>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="mt-4 flex gap-2">
               <button
                 onClick={() => setEditingId(habit.id)}
-                className="bg-blue-500 dark:bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 dark:hover:bg-blue-700"
+                className="rounded-lg bg-blue-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700"
               >
                 Edit
               </button>
               <button
                 onClick={() => handleDeleteHabit(habit.id)}
-                className="bg-red-500 dark:bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-600 dark:hover:bg-red-700"
+                className="rounded-lg bg-red-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
               >
                 Delete
               </button>
@@ -106,11 +111,11 @@ const HabitManager = () => {
       </div>
 
       {habits.length === 0 && !showForm && (
-        <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <p className="text-gray-600 dark:text-gray-400 mb-4">No habits yet. Create your first habit!</p>
+        <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50/80 px-5 py-8 text-center dark:border-gray-700 dark:bg-gray-800/50">
+          <p className="mb-4 text-gray-600 dark:text-gray-400">No habits yet. Create your first habit!</p>
           <button
             onClick={() => setShowForm(true)}
-            className="bg-green-500 dark:bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-600 dark:hover:bg-green-700 transition"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3 font-semibold text-white shadow-lg shadow-emerald-500/20 transition hover:translate-y-[-1px]"
           >
             Create First Habit
           </button>

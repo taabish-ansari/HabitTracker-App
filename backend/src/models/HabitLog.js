@@ -1,74 +1,103 @@
-const pool = require('../db');
+const { supabaseAdmin } = require('../supabase');
 
-class HabitLog {
-  static async logCompletion(habitId, date, completed) {
-    const existingLog = await pool.get(
-      'SELECT id FROM habit_logs WHERE habit_id = ? AND date = ?',
-      [habitId, date]
-    );
+const HabitLog = {
+  async logCompletion(userId, habitId, date, completed) {
+    const { data: existing } = await supabaseAdmin
+      .from('habit_logs')
+      .select('id')
+      .eq('habit_id', habitId)
+      .eq('user_id', userId)
+      .eq('date', date)
+      .single();
 
-    if (existingLog) {
-      await pool.run(
-        'UPDATE habit_logs SET completed = ?, updated_at = CURRENT_TIMESTAMP WHERE habit_id = ? AND date = ?',
-        [completed ? 1 : 0, habitId, date]
-      );
+    if (existing) {
+      const { data, error } = await supabaseAdmin
+        .from('habit_logs')
+        .update({
+          completed: completed === true || completed === 1,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('habit_id', habitId)
+        .eq('user_id', userId)
+        .eq('date', date)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
     } else {
-      await pool.run(
-        'INSERT INTO habit_logs (habit_id, date, completed) VALUES (?, ?, ?)',
-        [habitId, date, completed ? 1 : 0]
-      );
+      const { data, error } = await supabaseAdmin
+        .from('habit_logs')
+        .insert({
+          user_id: userId,
+          habit_id: habitId,
+          date,
+          completed: completed === true || completed === 1,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
     }
+  },
 
-    const result = await pool.get(
-      'SELECT * FROM habit_logs WHERE habit_id = ? AND date = ?',
-      [habitId, date]
-    );
-    return result;
-  }
+  async getForHabit(habitId, startDate, endDate) {
+    const { data, error } = await supabaseAdmin
+      .from('habit_logs')
+      .select('*')
+      .eq('habit_id', habitId)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: true });
 
-  static async getForHabit(habitId, startDate, endDate) {
-    const result = await pool.all(
-      'SELECT * FROM habit_logs WHERE habit_id = ? AND date BETWEEN ? AND ? ORDER BY date ASC',
-      [habitId, startDate, endDate]
-    );
-    return result;
-  }
+    if (error) throw error;
+    return data;
+  },
 
-  static async getForUser(userId, startDate, endDate) {
-    const result = await pool.all(
-      `SELECT hl.*, h.name, h.category, h.color, h.difficulty_weight
-       FROM habit_logs hl
-       JOIN habits h ON hl.habit_id = h.id
-       WHERE h.user_id = ? AND hl.date BETWEEN ? AND ?
-       ORDER BY hl.date DESC`,
-      [userId, startDate, endDate]
-    );
-    return result;
-  }
+  async getForUser(userId, startDate, endDate) {
+    const { data, error } = await supabaseAdmin
+      .from('habit_logs')
+      .select(`
+        *,
+        habits (id, name, category, color, difficulty_weight)
+      `)
+      .eq('habits.user_id', userId)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: false });
 
-  static async getCompletedCount(userId, date) {
-    const result = await pool.get(
-      `SELECT COUNT(*) as count FROM habit_logs hl
-       JOIN habits h ON hl.habit_id = h.id
-       WHERE h.user_id = ? AND hl.date = ? AND hl.completed = 1`,
-      [userId, date]
-    );
-    return result?.count || 0;
-  }
+    if (error) throw error;
+    return data;
+  },
 
-  static async getTotalHabits(userId) {
-    const result = await pool.get(
-      'SELECT COUNT(*) as count FROM habits WHERE user_id = ?',
-      [userId]
-    );
-    return result?.count || 0;
-  }
+  async getCompletedCount(userId, date) {
+    const { data, error: fetchError } = await supabaseAdmin
+      .from('habit_logs')
+      .select('id')
+      .eq('date', date)
+      .eq('completed', true)
+      .eq('user_id', userId);
 
-  static async getCompletionPercentage(userId, date) {
+    if (fetchError) throw fetchError;
+    return data?.length || 0;
+  },
+
+  async getTotalHabits(userId) {
+    const { count, error } = await supabaseAdmin
+      .from('habits')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    return count || 0;
+  },
+
+  async getCompletionPercentage(userId, date) {
     const completed = await this.getCompletedCount(userId, date);
     const total = await this.getTotalHabits(userId);
     return total === 0 ? 0 : Math.round((completed / total) * 100);
-  }
-}
+  },
+};
 
 module.exports = HabitLog;

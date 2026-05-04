@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { authService } from '../services/api';
+import { supabase } from '../lib/supabase';
+import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
 const RegisterPage = () => {
@@ -11,7 +11,6 @@ const RegisterPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
@@ -32,13 +31,15 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
-      const response = await authService.register(email, username, password);
-      // Auto-login after registration
-      const loginResponse = await authService.login(email, password);
-      login(loginResponse.data.user, loginResponse.data.token);
-      navigate('/dashboard');
+      const resp = await api.post('/auth/register', { email, username, password });
+      if (resp.data && resp.data.message === 'verification_sent') {
+        navigate('/login');
+      } else {
+        setError('Please check your email for verification code');
+      }
     } catch (err) {
-      setError(err.response?.data?.error || 'Registration failed');
+      const msg = err?.response?.data?.error || 'Registration failed. Please try again.';
+      setError(msg);
     } finally {
       setLoading(false);
     }

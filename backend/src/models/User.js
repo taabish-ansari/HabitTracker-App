@@ -1,34 +1,53 @@
-const bcrypt = require('bcryptjs');
-const pool = require('../db');
+const supabase = require('../supabase');
 
-class User {
-  static async create(email, username, password) {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const result = await pool.run(
-      'INSERT INTO users (email, username, password) VALUES (?, ?, ?)',
-      [email, username, hashedPassword]
-    );
-    return { id: result.lastInsertRowid, email, username };
-  }
+const User = {
+  async findById(id) {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email, username, created_at')
+      .eq('id', id)
+      .single();
 
-  static async findByEmail(email) {
-    const result = await pool.get('SELECT * FROM users WHERE email = ?', [email]);
-    return result;
-  }
+    if (error) throw error;
+    return data;
+  },
 
-  static async findById(id) {
-    const result = await pool.get('SELECT id, email, username, created_at FROM users WHERE id = ?', [id]);
-    return result;
-  }
+  async findByEmail(email) {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
 
-  static async verifyPassword(hashedPassword, plainPassword) {
-    return bcrypt.compare(plainPassword, hashedPassword);
-  }
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows found
+    return data || null;
+  },
 
-  static async getStats(userId) {
-    const result = await pool.get('SELECT * FROM user_stats WHERE user_id = ?', [userId]);
-    return result || { user_id: userId, total_xp: 0, level: 1, total_completed: 0 };
-  }
-}
+  async getStats(userId) {
+    const { data, error } = await supabase
+      .from('user_stats')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data || { user_id: userId, total_xp: 0, level: 1, total_completed: 0, total_habits: 0 };
+  },
+
+  async updateStats(userId, updates) {
+    const { data, error } = await supabase
+      .from('user_stats')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+};
 
 module.exports = User;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { habitService, logService, gamificationService } from '../services/api';
 
-export const useHabits = () => {
+export const useHabits = ({ autoFetch = true } = {}) => {
   const [habits, setHabits] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -22,7 +22,7 @@ export const useHabits = () => {
   const addHabit = async (name, category, difficulty_weight, color) => {
     try {
       const response = await habitService.createHabit(name, category, difficulty_weight, color);
-      setHabits([...habits, response.data]);
+      setHabits((prevHabits) => [...prevHabits, response.data]);
       return response.data;
     } catch (err) {
       setError(err.message);
@@ -33,7 +33,7 @@ export const useHabits = () => {
   const updateHabit = async (id, data) => {
     try {
       const response = await habitService.updateHabit(id, data);
-      setHabits(habits.map(h => (h.id === id ? response.data : h)));
+      setHabits((prevHabits) => prevHabits.map((habit) => (habit.id === id ? response.data : habit)));
       return response.data;
     } catch (err) {
       setError(err.message);
@@ -44,7 +44,7 @@ export const useHabits = () => {
   const deleteHabit = async (id) => {
     try {
       await habitService.deleteHabit(id);
-      setHabits(habits.filter(h => h.id !== id));
+      setHabits((prevHabits) => prevHabits.filter((habit) => habit.id !== id));
     } catch (err) {
       setError(err.message);
       throw err;
@@ -52,8 +52,10 @@ export const useHabits = () => {
   };
 
   useEffect(() => {
-    fetchHabits();
-  }, []);
+    if (autoFetch) {
+      fetchHabits();
+    }
+  }, [autoFetch]);
 
   return { habits, loading, error, addHabit, updateHabit, deleteHabit, fetchHabits };
 };
@@ -64,14 +66,37 @@ export const useHabitLogs = (startDate, endDate) => {
   const [error, setError] = useState(null);
 
   const logHabit = async (habitId, date, completed) => {
+    const logKey = `${habitId}-${date}`;
+    const previousLog = logs[logKey];
+    const optimisticLog = {
+      ...(previousLog || {}),
+      habit_id: habitId,
+      date,
+      completed: completed === true || completed === 1,
+    };
+
+    setLogs((prevLogs) => ({
+      ...prevLogs,
+      [logKey]: optimisticLog,
+    }));
+
     try {
       const response = await logService.logCompletion(habitId, date, completed);
-      setLogs({
-        ...logs,
+      setLogs((prevLogs) => ({
+        ...prevLogs,
         [`${habitId}-${date}`]: response.data,
-      });
+      }));
       return response.data;
     } catch (err) {
+      setLogs((prevLogs) => {
+        const nextLogs = { ...prevLogs };
+        if (previousLog) {
+          nextLogs[logKey] = previousLog;
+        } else {
+          delete nextLogs[logKey];
+        }
+        return nextLogs;
+      });
       setError(err.message);
       throw err;
     }

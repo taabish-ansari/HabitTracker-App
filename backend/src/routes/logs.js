@@ -13,17 +13,23 @@ router.post('/', authMiddleware, async (req, res, next) => {
       return res.status(400).json({ error: 'Habit ID and date are required' });
     }
 
-    const log = await HabitLog.logCompletion(habitId, date, completed);
-
-    // Award XP if completed
-    if (completed) {
-      const habit = await Habit.findById(habitId);
-      const xpEarned = habit.difficulty_weight * 10; // 10 XP per difficulty point
-      await GameStats.addXP(req.userId, habitId, xpEarned);
-      await GameStats.updateStreaks(habitId);
-    }
+    const log = await HabitLog.logCompletion(req.userId, habitId, date, completed);
 
     res.status(201).json(log);
+
+    // Award XP and update streaks after responding so the UI does not wait on them
+    if (completed) {
+      setImmediate(async () => {
+        try {
+          const habit = await Habit.findById(habitId);
+          const xpEarned = habit.difficulty_weight * 10; // 10 XP per difficulty point
+          await GameStats.addXP(req.userId, habitId, xpEarned);
+          await GameStats.updateStreaks(habitId);
+        } catch (backgroundErr) {
+          console.error('Background habit update failed:', backgroundErr);
+        }
+      });
+    }
   } catch (err) {
     next(err);
   }

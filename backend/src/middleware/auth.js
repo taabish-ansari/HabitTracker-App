@@ -1,6 +1,12 @@
-const jwt = require('jsonwebtoken');
+require('../config/loadEnv');
+const { createClient } = require('@supabase/supabase-js');
 
-function authMiddleware(req, res, next) {
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
+
+async function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -8,13 +14,18 @@ function authMiddleware(req, res, next) {
     return res.status(401).json({ error: 'No token provided' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) {
+  try {
+    const { data, error } = await supabase.auth.getUser(token);
+
+    if (error || !data.user) {
       return res.status(403).json({ error: 'Invalid token' });
     }
-    req.userId = decoded.userId;
+
+    req.userId = data.user.id;
     next();
-  });
+  } catch (err) {
+    res.status(403).json({ error: 'Invalid token' });
+  }
 }
 
 function errorHandler(err, req, res, next) {

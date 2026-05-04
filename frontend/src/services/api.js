@@ -1,6 +1,12 @@
 import axios from 'axios';
+import { supabase } from '../lib/supabase';
 
-const API_BASE = '/api';
+const apiUrl = import.meta.env.VITE_API_URL?.trim();
+const API_BASE = apiUrl
+  ? apiUrl.replace(/\/$/, '').endsWith('/api')
+    ? apiUrl.replace(/\/$/, '')
+    : `${apiUrl.replace(/\/$/, '')}/api`
+  : '/api';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -9,22 +15,16 @@ const api = axios.create({
   },
 });
 
-// Add token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('authToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Add Supabase token to requests
+api.interceptors.request.use(async (config) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    config.headers.Authorization = `Bearer ${session.access_token}`;
   }
   return config;
 });
 
-export const authService = {
-  register: (email, username, password) =>
-    api.post('/auth/register', { email, username, password }),
-  login: (email, password) => api.post('/auth/login', { email, password }),
-  getProfile: () => api.get('/auth/me'),
-};
-
+// Remove old auth service endpoints since we use Supabase Auth now
 export const habitService = {
   createHabit: (name, category, difficulty_weight, color) =>
     api.post('/habits', { name, category, difficulty_weight, color }),

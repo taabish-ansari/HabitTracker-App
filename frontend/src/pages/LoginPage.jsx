@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { authService } from '../services/api';
+import { supabase } from '../lib/supabase';
+import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {
@@ -9,7 +9,8 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [verificationMode, setVerificationMode] = useState(false);
+  const [code, setCode] = useState('');
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
@@ -19,11 +20,50 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      const response = await authService.login(email, password);
-      login(response.data.user, response.data.token);
-      navigate('/dashboard');
+      const resp = await api.post('/auth/login', { email, password });
+      if (resp.status === 200 && resp.data?.session) {
+        // set supabase client session so the app knows the user
+        await supabase.auth.setSession({
+          access_token: resp.data.session.access_token,
+          refresh_token: resp.data.session.refresh_token,
+        });
+        navigate('/dashboard');
+        return;
+      }
+      // handled below
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed');
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.error || 'Login failed. Please try again.';
+      if (status === 403 && msg === 'verification_required') {
+        setVerificationMode(true);
+        setError('A verification code was sent to your email. Enter it below.');
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      await api.post('/auth/verify', { email, code });
+      // try login again
+      const resp = await api.post('/auth/login', { email, password });
+      if (resp.status === 200 && resp.data?.session) {
+        await supabase.auth.setSession({
+          access_token: resp.data.session.access_token,
+          refresh_token: resp.data.session.refresh_token,
+        });
+        navigate('/dashboard');
+        return;
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.error || 'Verification failed';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -45,7 +85,7 @@ const LoginPage = () => {
 
         {error && <div className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 p-3 rounded mb-4">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={verificationMode ? handleVerify : handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Email</label>
             <input
@@ -69,6 +109,20 @@ const LoginPage = () => {
               placeholder="••••••••"
             />
           </div>
+
+          {verificationMode && (
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Verification Code</label>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                required
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                placeholder="123456"
+              />
+            </div>
+          )}
 
           <button
             type="submit"

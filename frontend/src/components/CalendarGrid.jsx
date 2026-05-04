@@ -97,39 +97,40 @@ const CalendarGrid = ({ habits, logs, onToggleHabit, currentMonth, currentYear }
   }, [habits, days, logs]);
 
   return (
-    <div className="w-full space-y-4">
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-md border border-gray-200 dark:border-gray-800 overflow-hidden">
+    <div className="w-full space-y-6 pt-2">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200/80 dark:border-gray-800 overflow-hidden">
         {/* Spreadsheet-style month + metrics strip */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-0 border-b border-gray-200 dark:border-gray-800">
-          <div className="p-5 md:col-span-1 border-r border-gray-200 dark:border-gray-800">
-            <p className="text-4xl font-light tracking-tight text-gray-900 dark:text-gray-100">{monthName}</p>
+          <div className="p-6 md:col-span-1 border-r border-gray-200 dark:border-gray-800">
+            <p className="text-5xl font-light tracking-tight text-gray-900 dark:text-gray-100">{monthName}</p>
+            <p className="mt-2 text-sm uppercase tracking-[0.28em] text-gray-500 dark:text-gray-400">Monthly planner</p>
           </div>
-          <div className="p-5 border-r border-gray-200 dark:border-gray-800">
+          <div className="p-6 border-r border-gray-200 dark:border-gray-800">
             <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Number of habits</p>
-            <p className="text-2xl mt-1 font-semibold text-gray-900 dark:text-gray-100">{totalHabits}</p>
+            <p className="text-3xl mt-2 font-semibold text-gray-900 dark:text-gray-100">{totalHabits}</p>
           </div>
-          <div className="p-5 border-r border-gray-200 dark:border-gray-800">
+          <div className="p-6 border-r border-gray-200 dark:border-gray-800">
             <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Completed habits</p>
-            <p className="text-2xl mt-1 font-semibold text-gray-900 dark:text-gray-100">{completedCount}</p>
+            <p className="text-3xl mt-2 font-semibold text-gray-900 dark:text-gray-100">{completedCount}</p>
           </div>
-          <div className="p-5">
+          <div className="p-6">
             <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Progress</p>
-            <div className="mt-3 h-4 w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            <div className="mt-4 h-4 w-full rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div
-                className="h-full bg-green-400 dark:bg-green-500 transition-all duration-300"
+                className="h-full bg-gradient-to-r from-emerald-400 to-cyan-400 dark:from-emerald-500 dark:to-cyan-500 transition-all duration-300"
                 style={{ width: `${progressPercentage}%` }}
               />
             </div>
-            <p className="text-sm mt-1 font-medium text-gray-700 dark:text-gray-300">{progressPercentage}%</p>
+            <p className="text-sm mt-2 font-medium text-gray-700 dark:text-gray-300">{progressPercentage}%</p>
           </div>
         </div>
 
         {/* Spreadsheet body */}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-xs">
+        <div className="overflow-auto max-h-[72vh]">
+          <table className="w-full min-w-[1100px] border-collapse text-sm">
             <tbody>
               <tr className="bg-gray-50 dark:bg-gray-800/60">
-                <td className="min-w-52 p-2 font-semibold text-gray-700 dark:text-gray-300 border-r border-b border-gray-200 dark:border-gray-800">
+                <td className="min-w-56 p-3 font-semibold text-gray-700 dark:text-gray-300 border-r border-b border-gray-200 dark:border-gray-800 sticky left-0 bg-gray-50 dark:bg-gray-800/60 z-10">
                   habits
                 </td>
                 {uniqueWeeks.map((week) => {
@@ -138,7 +139,7 @@ const CalendarGrid = ({ habits, logs, onToggleHabit, currentMonth, currentYear }
                     <td
                       key={`week-${week}`}
                       colSpan={weekDaysCount}
-                      className="p-2 text-center font-semibold text-gray-600 dark:text-gray-300 border-b border-r border-gray-200 dark:border-gray-800"
+                      className="p-3 text-center font-semibold text-gray-600 dark:text-gray-300 border-b border-r border-gray-200 dark:border-gray-800"
                     >
                       Week {week}
                     </td>
@@ -147,11 +148,11 @@ const CalendarGrid = ({ habits, logs, onToggleHabit, currentMonth, currentYear }
               </tr>
 
               <tr className="bg-gray-50 dark:bg-gray-800/60">
-                <td className="p-1 border-r border-b border-gray-200 dark:border-gray-800" />
+                <td className="p-2 border-r border-b border-gray-200 dark:border-gray-800 sticky left-0 bg-gray-50 dark:bg-gray-800/60 z-10" />
                 {days.map((day) => (
                   <td
                     key={`weekday-${day}`}
-                    className="w-8 p-1 text-center text-[10px] font-medium text-gray-500 dark:text-gray-400 border-r border-b border-gray-200 dark:border-gray-800"
+                    className="w-12 p-2 text-center text-[11px] font-medium text-gray-500 dark:text-gray-400 border-r border-b border-gray-200 dark:border-gray-800"
                   >
                     {weekdayLabel(day)}
                   </td>
@@ -159,11 +160,11 @@ const CalendarGrid = ({ habits, logs, onToggleHabit, currentMonth, currentYear }
               </tr>
 
               <tr className="bg-white dark:bg-gray-900">
-                <td className="p-1 border-r border-b border-gray-200 dark:border-gray-800" />
+                <td className="p-2 border-r border-b border-gray-200 dark:border-gray-800 sticky left-0 bg-white dark:bg-gray-900 z-10" />
                 {days.map((day) => (
                   <td
                     key={`daynum-${day}`}
-                    className="w-8 p-1 text-center text-[10px] text-gray-500 dark:text-gray-400 border-r border-b border-gray-200 dark:border-gray-800"
+                    className="w-12 p-2 text-center text-[11px] text-gray-500 dark:text-gray-400 border-r border-b border-gray-200 dark:border-gray-800"
                   >
                     {day}
                   </td>
@@ -172,16 +173,16 @@ const CalendarGrid = ({ habits, logs, onToggleHabit, currentMonth, currentYear }
 
               {habits.map((habit) => (
                 <tr key={habit.id}>
-                  <td className="p-2 border-r border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky left-0 z-10">
+                  <td className="p-3 border-r border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky left-0 z-10">
                     <div className="flex items-center gap-2">
                       <span
-                        className="inline-block w-2.5 h-2.5 rounded-sm"
+                        className="inline-block w-3 h-3 rounded-sm"
                         style={{ backgroundColor: habit.color }}
                       />
-                      <span className="text-xs font-medium text-gray-800 dark:text-gray-200 truncate max-w-[10rem]">
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate max-w-[12rem]">
                         {habit.name}
                       </span>
-                      <span className="text-[10px] text-gray-500 dark:text-gray-400 ml-auto">
+                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
                         {completionByHabit[habit.id] || 0}/{days.length}
                       </span>
                     </div>
@@ -191,13 +192,13 @@ const CalendarGrid = ({ habits, logs, onToggleHabit, currentMonth, currentYear }
                     return (
                       <td
                         key={`${habit.id}-${day}`}
-                        className={`w-8 h-8 text-center border-r border-b border-gray-200 dark:border-gray-800 ${
-                          checked ? 'bg-gray-100 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'
-                        } ${isCurrentMonth && day === todayDate ? 'ring-1 ring-inset ring-green-400 dark:ring-green-500' : ''}`}
+                        className={`w-12 h-12 text-center border-r border-b border-gray-200 dark:border-gray-800 transition-colors ${
+                          checked ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'bg-white dark:bg-gray-900'
+                        } ${isCurrentMonth && day === todayDate ? 'ring-2 ring-inset ring-emerald-400 dark:ring-emerald-500' : ''}`}
                       >
                         <input
                           type="checkbox"
-                          className="w-3.5 h-3.5 accent-gray-700 dark:accent-gray-200 cursor-pointer"
+                          className="w-4 h-4 accent-emerald-500 cursor-pointer"
                           checked={checked}
                           onChange={() => handleToggle(habit.id, day)}
                         />
@@ -208,13 +209,13 @@ const CalendarGrid = ({ habits, logs, onToggleHabit, currentMonth, currentYear }
               ))}
 
               <tr className="bg-gray-50 dark:bg-gray-800/60">
-                <td className="p-2 text-xs font-semibold text-gray-700 dark:text-gray-300 border-r border-b border-gray-200 dark:border-gray-800">
+                <td className="p-3 text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-b border-gray-200 dark:border-gray-800 sticky left-0 bg-gray-50 dark:bg-gray-800/60 z-10">
                   Progress
                 </td>
                 {dailyStats.map((stat) => (
                   <td
                     key={`percent-${stat.day}`}
-                    className="p-1 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 border-r border-b border-gray-200 dark:border-gray-800"
+                    className="p-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-r border-b border-gray-200 dark:border-gray-800"
                   >
                     {stat.percentage}%
                   </td>
@@ -222,13 +223,13 @@ const CalendarGrid = ({ habits, logs, onToggleHabit, currentMonth, currentYear }
               </tr>
 
               <tr className="bg-gray-50 dark:bg-gray-800/60">
-                <td className="p-2 text-xs font-semibold text-gray-700 dark:text-gray-300 border-r border-b border-gray-200 dark:border-gray-800">
+                <td className="p-3 text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-b border-gray-200 dark:border-gray-800 sticky left-0 bg-gray-50 dark:bg-gray-800/60 z-10">
                   Done
                 </td>
                 {dailyStats.map((stat) => (
                   <td
                     key={`count-${stat.day}`}
-                    className="p-1 text-center text-[10px] text-gray-600 dark:text-gray-300 border-r border-b border-gray-200 dark:border-gray-800"
+                    className="p-2 text-center text-xs text-gray-600 dark:text-gray-300 border-r border-b border-gray-200 dark:border-gray-800"
                   >
                     {stat.completed}
                   </td>
@@ -239,20 +240,26 @@ const CalendarGrid = ({ habits, logs, onToggleHabit, currentMonth, currentYear }
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-md border border-gray-200 dark:border-gray-800 p-4">
-        <ResponsiveContainer width="100%" height={180}>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200/80 dark:border-gray-800 p-5">
+        <ResponsiveContainer width="100%" height={220}>
           <AreaChart data={trendData}>
-            <CartesianGrid strokeDasharray="2 2" stroke="#d1d5db" />
-            <XAxis dataKey="day" tick={{ fontSize: 11 }} stroke="#9ca3af" />
-            <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" domain={[0, 100]} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.25} />
+            <XAxis dataKey="day" tick={{ fontSize: 12 }} stroke="#94a3b8" />
+            <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" domain={[0, 100]} />
             <Area
               type="monotone"
               dataKey="completion"
-              stroke="#8fbf7f"
-              fill="#d9e9d1"
-              strokeWidth={2}
+              stroke="#34d399"
+              fill="url(#completionGradient)"
+              strokeWidth={3}
               isAnimationActive
             />
+            <defs>
+              <linearGradient id="completionGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#34d399" stopOpacity={0.45} />
+                <stop offset="95%" stopColor="#34d399" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
           </AreaChart>
         </ResponsiveContainer>
       </div>
