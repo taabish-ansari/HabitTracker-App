@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import CalendarGrid from '../components/CalendarGrid';
 import HabitManager from '../components/HabitManager';
 import AnalyticsDashboard from '../components/AnalyticsDashboard';
@@ -10,19 +10,20 @@ import { useTheme } from '../context/ThemeContext';
 const DashboardPage = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [activeTab, setActiveTab] = useState('calendar');
-  const { habits, loading: habitsLoading, error: habitsError, addHabit, updateHabit, deleteHabit, fetchHabits } = useHabits();
+  const [activePage, setActivePage] = useState('calendar');
+  const { user, logout } = useAuth();
+  const habitOrderStorageKey = user?.id ? `habit-order-${user.id}` : 'habit-order-guest';
+  const { habits, loading: habitsLoading, error: habitsError, addHabit, updateHabit, deleteHabit, reorderHabits } = useHabits({ autoFetch: true, orderStorageKey: habitOrderStorageKey });
   const { isDark, toggleTheme } = useTheme();
-  const { logout } = useAuth();
 
   // Get date range for current month
   const startDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
   const endDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${new Date(currentYear, currentMonth + 1, 0).getDate()}`;
 
-  const { logs, logHabit, fetchLogs } = useHabitLogs(startDate, endDate);
+  const { logs, logHabit } = useHabitLogs(startDate, endDate);
 
-  const handleAddHabit = async (formData) => {
-    await addHabit(formData.name, formData.category, formData.difficulty_weight, formData.color);
+  const handleAddHabit = async (name, category, difficulty_weight, color) => {
+    await addHabit(name, category, difficulty_weight, color);
   };
 
   const handleUpdateHabit = async (id, formData) => {
@@ -31,6 +32,10 @@ const DashboardPage = () => {
 
   const handleDeleteHabit = async (id) => {
     await deleteHabit(id);
+  };
+
+  const handleReorderHabits = async (orderedIds) => {
+    await reorderHabits(orderedIds);
   };
 
   const handleToggleHabit = async (habitId, date, completed) => {
@@ -63,6 +68,27 @@ const DashboardPage = () => {
     const today = new Date();
     setCurrentMonth(today.getMonth());
     setCurrentYear(today.getFullYear());
+  };
+
+  const pageOrder = ['calendar', 'habits', 'analytics', 'points'];
+  const pageTitles = {
+    calendar: 'Calendar',
+    habits: 'Habits',
+    analytics: 'Analytics',
+    points: 'Points',
+  };
+
+  const currentPageIndex = pageOrder.indexOf(activePage);
+  const goToPreviousPage = () => {
+    if (currentPageIndex > 0) {
+      setActivePage(pageOrder[currentPageIndex - 1]);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (currentPageIndex < pageOrder.length - 1) {
+      setActivePage(pageOrder[currentPageIndex + 1]);
+    }
   };
 
 
@@ -99,94 +125,116 @@ const DashboardPage = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b border-gray-300 dark:border-gray-700">
-          <button
-            onClick={() => setActiveTab('calendar')}
-            className={`px-6 py-3 font-medium transition ${
-              activeTab === 'calendar'
-                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-            }`}
-          >
-            📅 Calendar
-          </button>
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`px-6 py-3 font-medium transition ${
-              activeTab === 'analytics'
-                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-            }`}
-          >
-            📊 Analytics
-          </button>
-          <button
-            onClick={() => setActiveTab('gamification')}
-            className={`px-6 py-3 font-medium transition ${
-              activeTab === 'gamification'
-                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-            }`}
-          >
-            ⭐ Points
-          </button>
-        </div>
-
-        {/* Calendar Tab */}
-        {activeTab === 'calendar' && (
-          <div className="space-y-4">
-            {/* Month Navigation - Compact */}
-            <div className="flex justify-center items-center gap-3 bg-white dark:bg-gray-800 p-3 rounded-lg shadow">
-              <button
-                onClick={goToPreviousMonth}
-                className="bg-gray-400 dark:bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-500 dark:hover:bg-gray-700 transition"
-              >
-                ← Previous
-              </button>
-              <button
-                onClick={goToToday}
-                className="bg-blue-500 dark:bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 dark:hover:bg-blue-700 transition"
-              >
-                Today
-              </button>
-              <button
-                onClick={goToNextMonth}
-                className="bg-gray-400 dark:bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-500 dark:hover:bg-gray-700 transition"
-              >
-                Next →
-              </button>
+        <div className="rounded-3xl border border-gray-200 bg-white/90 p-6 shadow-lg backdrop-blur dark:border-gray-800 dark:bg-gray-900/80">
+          <div className="mb-6 flex flex-col gap-4 border-b border-gray-200 pb-5 dark:border-gray-800 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.28em] text-sky-600 dark:text-sky-400">
+                {pageTitles[activePage]}
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {activePage === 'calendar' && 'Track daily progress'}
+                {activePage === 'habits' && 'Add and manage habits'}
+                {activePage === 'analytics' && 'Review your stats'}
+                {activePage === 'points' && 'Check your points'}
+              </h2>
             </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4 lg:mt-8">
-                  <div className="lg:col-span-1 lg:sticky lg:top-6 self-start">
-                    <HabitManager
-                      habits={habits}
-                      addHabit={handleAddHabit}
-                      updateHabit={(id, data) => handleUpdateHabit(id, data)}
-                      deleteHabit={handleDeleteHabit}
-                      loading={habitsLoading}
-                      error={habitsError}
-                    />
-                  </div>
-                  <div className="lg:col-span-2 space-y-6">
-                    <CalendarGrid
-                      habits={habits}
-                      logs={logs}
-                      onToggleHabit={handleToggleHabit}
-                      currentMonth={currentMonth}
-                      currentYear={currentYear}
-                    />
-                  </div>
-                </div>
+            <div className="flex items-center gap-2 self-start rounded-2xl bg-gray-100 px-2 py-2 dark:bg-gray-800">
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPageIndex === 0}
+                className="rounded-xl bg-gray-400 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-500 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-gray-600 dark:hover:bg-gray-500"
+              >
+                Previous
+              </button>
+              <div className="min-w-28 px-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-200">
+                {currentPageIndex + 1} / {pageOrder.length}
+              </div>
+              <button
+                onClick={goToNextPage}
+                disabled={currentPageIndex === pageOrder.length - 1}
+                className="rounded-xl bg-blue-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-blue-600 dark:hover:bg-blue-500"
+              >
+                Next
+              </button>
+            </div>
           </div>
-        )}
 
-        {/* Analytics Tab */}
-        {activeTab === 'analytics' && <AnalyticsDashboard habits={habits} logs={logs} />}
+          {activePage === 'calendar' && (
+            <section className="space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-sm font-semibold uppercase tracking-[0.28em] text-blue-600 dark:text-blue-400">Calendar</p>
+                <div className="hidden sm:flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow dark:bg-gray-800">
+                  <button
+                    onClick={goToPreviousMonth}
+                    className="bg-gray-400 dark:bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-500 dark:hover:bg-gray-700 transition"
+                  >
+                    ← Previous Month
+                  </button>
+                  <button
+                    onClick={goToToday}
+                    className="bg-blue-500 dark:bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 dark:hover:bg-blue-700 transition"
+                  >
+                    Today
+                  </button>
+                  <button
+                    onClick={goToNextMonth}
+                    className="bg-gray-400 dark:bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-500 dark:hover:bg-gray-700 transition"
+                  >
+                    Next Month →
+                  </button>
+                </div>
+              </div>
 
-        {/* Gamification Tab */}
-        {activeTab === 'gamification' && <GamificationPanel />}
+              <div className="sm:hidden flex justify-center items-center gap-3 bg-white dark:bg-gray-800 p-3 rounded-lg shadow">
+                <button
+                  onClick={goToPreviousMonth}
+                  className="bg-gray-400 dark:bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-500 dark:hover:bg-gray-700 transition"
+                >
+                  ← Previous Month
+                </button>
+                <button
+                  onClick={goToToday}
+                  className="bg-blue-500 dark:bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 dark:hover:bg-blue-700 transition"
+                >
+                  Today
+                </button>
+                <button
+                  onClick={goToNextMonth}
+                  className="bg-gray-400 dark:bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-500 dark:hover:bg-gray-700 transition"
+                >
+                  Next Month →
+                </button>
+              </div>
+
+              <CalendarGrid
+                habits={habits}
+                logs={logs}
+                onToggleHabit={handleToggleHabit}
+                currentMonth={currentMonth}
+                currentYear={currentYear}
+              />
+            </section>
+          )}
+
+          {activePage === 'habits' && (
+            <section>
+              <HabitManager
+                habits={habits}
+                addHabit={handleAddHabit}
+                updateHabit={(id, data) => handleUpdateHabit(id, data)}
+                deleteHabit={handleDeleteHabit}
+                reorderHabits={handleReorderHabits}
+                loading={habitsLoading}
+                error={habitsError}
+              />
+            </section>
+          )}
+
+          {activePage === 'analytics' && <AnalyticsDashboard habits={habits} logs={logs} />}
+
+          {activePage === 'points' && <GamificationPanel />}
+        </div>
       </div>
     </div>
   );

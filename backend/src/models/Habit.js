@@ -52,7 +52,7 @@ const Habit = {
   async findByUserId(userId) {
     const { data, error } = await supabaseAdmin
       .from('habits')
-      .select('*')
+      .select('id,user_id,name,category,difficulty_weight,color,target_frequency,description,created_at,updated_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
@@ -63,7 +63,7 @@ const Habit = {
   async findById(id) {
     const { data, error } = await supabaseAdmin
       .from('habits')
-      .select('*')
+      .select('id,user_id,name,category,difficulty_weight,color,target_frequency,description,created_at,updated_at')
       .eq('id', id)
       .single();
 
@@ -89,6 +89,15 @@ const Habit = {
     return data;
   },
 
+  async reorder(userId, orderedIds) {
+    const habits = await this.getWithStreaks(userId);
+    const habitMap = new Map(habits.map((habit) => [habit.id, habit]));
+    const reordered = orderedIds.map((id) => habitMap.get(id)).filter(Boolean);
+    const remaining = habits.filter((habit) => !orderedIds.includes(habit.id));
+
+    return [...reordered, ...remaining];
+  },
+
   async delete(id) {
     const { error } = await supabaseAdmin
       .from('habits')
@@ -103,7 +112,7 @@ const Habit = {
     const { data, error } = await supabaseAdmin
       .from('habits')
       .select(`
-        *,
+        id,user_id,name,category,difficulty_weight,color,target_frequency,description,created_at,updated_at,
         streaks (
           id,
           current_streak,

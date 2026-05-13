@@ -23,7 +23,15 @@ const HabitForm = ({ onSubmit, onCancel, initialData = null }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    const submittedValues = Object.fromEntries(new FormData(e.currentTarget).entries());
+    const submittedData = {
+      name: submittedValues.name || formData.name,
+      category: submittedValues.category || formData.category,
+      difficulty_weight: Number.parseFloat(submittedValues.difficulty_weight || formData.difficulty_weight),
+      color: submittedValues.color || formData.color,
+    };
+
+    onSubmit(submittedData);
     if (!initialData) {
       setFormData({
         name: '',

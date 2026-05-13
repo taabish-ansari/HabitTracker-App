@@ -26,11 +26,31 @@ api.interceptors.request.use(async (config) => {
 
 // Remove old auth service endpoints since we use Supabase Auth now
 export const habitService = {
-  createHabit: (name, category, difficulty_weight, color) =>
-    api.post('/habits', { name, category, difficulty_weight, color }),
+  createHabit: async (name, category, difficulty_weight, color) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const response = await fetch(`${API_BASE}/habits`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
+      body: JSON.stringify({ name, category, difficulty_weight, color }),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const error = new Error(payload.error || 'Request failed');
+      error.response = { status: response.status, data: payload };
+      throw error;
+    }
+
+    return { data: payload, status: response.status };
+  },
   getHabits: () => api.get('/habits'),
   updateHabit: (id, data) => api.put(`/habits/${id}`, data),
   deleteHabit: (id) => api.delete(`/habits/${id}`),
+  reorderHabits: (orderedIds) => api.put('/habits/reorder', { orderedIds }),
 };
 
 export const logService = {

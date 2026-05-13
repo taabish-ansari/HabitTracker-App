@@ -33,9 +33,10 @@ const RegisterPage = () => {
     try {
       const resp = await api.post('/auth/register', { email, username, password });
       if (resp.data && resp.data.message === 'verification_sent') {
+        alert('A 4-digit verification code has been sent to your email.');
         navigate('/login');
       } else {
-        setError('Please check your email for verification code');
+        setError('Please check your email for your 4-digit verification code');
       }
     } catch (err) {
       const msg = err?.response?.data?.error || 'Registration failed. Please try again.';

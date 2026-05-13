@@ -11,6 +11,14 @@ async function authMiddleware(req, res, next) {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
+    const allowGuestAccess = process.env.NODE_ENV !== 'production' && process.env.ALLOW_GUEST_ACCESS !== 'false';
+
+    if (allowGuestAccess && process.env.DEMO_USER_ID) {
+      req.userId = process.env.DEMO_USER_ID;
+      req.isGuestUser = true;
+      return next();
+    }
+
     return res.status(401).json({ error: 'No token provided' });
   }
 

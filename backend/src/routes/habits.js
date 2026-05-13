@@ -11,11 +11,14 @@ router.post('/', authMiddleware, async (req, res, next) => {
       return res.status(400).json({ error: 'Name and category are required' });
     }
 
+    const parsedDifficulty = Number.parseFloat(difficulty_weight);
+    const normalizedDifficulty = Number.isFinite(parsedDifficulty) ? Math.max(1, Math.round(parsedDifficulty)) : 1;
+
     const habit = await Habit.create(
       req.userId,
       name,
       category,
-      difficulty_weight || 1.0,
+      normalizedDifficulty,
       color || '#4CAF50'
     );
 
@@ -46,6 +49,21 @@ router.get('/:id', authMiddleware, async (req, res, next) => {
   }
 });
 
+router.put('/reorder', authMiddleware, async (req, res, next) => {
+  try {
+    const { orderedIds } = req.body;
+
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      return res.status(400).json({ error: 'orderedIds must be a non-empty array' });
+    }
+
+    const reordered = await Habit.reorder(req.userId, orderedIds);
+    res.json(reordered);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.put('/:id', authMiddleware, async (req, res, next) => {
   try {
     const { name, category, difficulty_weight, color } = req.body;
@@ -55,11 +73,14 @@ router.put('/:id', authMiddleware, async (req, res, next) => {
       return res.status(404).json({ error: 'Habit not found' });
     }
 
+    const parsedDifficulty = Number.parseFloat(difficulty_weight);
+    const normalizedDifficulty = Number.isFinite(parsedDifficulty) ? Math.max(1, Math.round(parsedDifficulty)) : habit.difficulty_weight;
+
     const updated = await Habit.update(
       req.params.id,
       name || habit.name,
       category || habit.category,
-      difficulty_weight || habit.difficulty_weight,
+      normalizedDifficulty,
       color || habit.color
     );
 

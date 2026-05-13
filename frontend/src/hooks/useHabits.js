@@ -1,16 +1,44 @@
 import { useState, useEffect } from 'react';
 import { habitService, logService, gamificationService } from '../services/api';
 
-export const useHabits = ({ autoFetch = true } = {}) => {
+export const useHabits = ({ autoFetch = true, orderStorageKey = 'habit-order' } = {}) => {
   const [habits, setHabits] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const getStoredOrder = () => {
+    if (typeof window === 'undefined') return [];
+
+    try {
+      return JSON.parse(window.localStorage.getItem(orderStorageKey) || '[]');
+    } catch {
+      return [];
+    }
+  };
+
+  const saveStoredOrder = (orderedIds) => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(orderStorageKey, JSON.stringify(orderedIds));
+  };
+
+  const sortHabits = (habitList) => {
+    const storedOrder = getStoredOrder();
+
+    if (!storedOrder.length) {
+      return habitList;
+    }
+
+    const habitMap = new Map(habitList.map((habit) => [habit.id, habit]));
+    const orderedHabits = storedOrder.map((id) => habitMap.get(id)).filter(Boolean);
+    const remainingHabits = habitList.filter((habit) => !storedOrder.includes(habit.id));
+    return [...orderedHabits, ...remainingHabits];
+  };
 
   const fetchHabits = async () => {
     setLoading(true);
     try {
       const response = await habitService.getHabits();
-      setHabits(response.data);
+      setHabits(sortHabits(response.data));
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -22,7 +50,13 @@ export const useHabits = ({ autoFetch = true } = {}) => {
   const addHabit = async (name, category, difficulty_weight, color) => {
     try {
       const response = await habitService.createHabit(name, category, difficulty_weight, color);
-      setHabits((prevHabits) => [...prevHabits, response.data]);
+      setHabits((prevHabits) => {
+        const nextHabits = [...prevHabits, response.data];
+        const ordered = sortHabits(nextHabits);
+        saveStoredOrder(ordered.map((habit) => habit.id));
+        return ordered;
+      });
+      setError(null);
       return response.data;
     } catch (err) {
       setError(err.message);
@@ -34,6 +68,7 @@ export const useHabits = ({ autoFetch = true } = {}) => {
     try {
       const response = await habitService.updateHabit(id, data);
       setHabits((prevHabits) => prevHabits.map((habit) => (habit.id === id ? response.data : habit)));
+      setError(null);
       return response.data;
     } catch (err) {
       setError(err.message);
@@ -44,7 +79,29 @@ export const useHabits = ({ autoFetch = true } = {}) => {
   const deleteHabit = async (id) => {
     try {
       await habitService.deleteHabit(id);
-      setHabits((prevHabits) => prevHabits.filter((habit) => habit.id !== id));
+      setHabits((prevHabits) => {
+        const nextHabits = prevHabits.filter((habit) => habit.id !== id);
+        saveStoredOrder(nextHabits.map((habit) => habit.id));
+        return nextHabits;
+      });
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  const reorderHabits = async (orderedIds) => {
+    try {
+      saveStoredOrder(orderedIds);
+      setHabits((prevHabits) => {
+        const habitMap = new Map(prevHabits.map((habit) => [habit.id, habit]));
+        const reordered = orderedIds.map((id) => habitMap.get(id)).filter(Boolean);
+        const remaining = prevHabits.filter((habit) => !orderedIds.includes(habit.id));
+        return [...reordered, ...remaining];
+      });
+      setError(null);
+      return orderedIds;
     } catch (err) {
       setError(err.message);
       throw err;
@@ -55,9 +112,9 @@ export const useHabits = ({ autoFetch = true } = {}) => {
     if (autoFetch) {
       fetchHabits();
     }
-  }, [autoFetch]);
+  }, [autoFetch, orderStorageKey]);
 
-  return { habits, loading, error, addHabit, updateHabit, deleteHabit, fetchHabits };
+  return { habits, loading, error, addHabit, updateHabit, deleteHabit, reorderHabits, fetchHabits };
 };
 
 export const useHabitLogs = (startDate, endDate) => {

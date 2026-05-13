@@ -126,7 +126,7 @@ const CalendarGrid = ({ habits, logs, onToggleHabit, currentMonth, currentYear }
         </div>
 
         {/* Spreadsheet body */}
-        <div className="overflow-auto max-h-[72vh]">
+        <div className="overflow-x-auto overflow-y-visible">
           <table className="w-full min-w-[1100px] border-collapse text-sm">
             <tbody>
               <tr className="bg-gray-50 dark:bg-gray-800/60">

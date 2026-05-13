@@ -6,6 +6,7 @@ const HabitManager = ({
   addHabit,
   updateHabit,
   deleteHabit,
+  reorderHabits,
   loading = false,
   error = null,
 } = {}) => {
@@ -37,6 +38,25 @@ const HabitManager = ({
       } catch (err) {
         console.error('Failed to delete habit:', err);
       }
+    }
+  };
+
+  const moveHabit = async (habitId, direction) => {
+    const currentIndex = habits.findIndex((habit) => habit.id === habitId);
+    const targetIndex = currentIndex + direction;
+
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= habits.length) {
+      return;
+    }
+
+    const nextHabits = [...habits];
+    const [movedHabit] = nextHabits.splice(currentIndex, 1);
+    nextHabits.splice(targetIndex, 0, movedHabit);
+
+    try {
+      await reorderHabits(nextHabits.map((habit) => habit.id));
+    } catch (err) {
+      console.error('Failed to reorder habits:', err);
     }
   };
 
@@ -93,6 +113,20 @@ const HabitManager = ({
               )}
             </div>
             <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => moveHabit(habit.id, -1)}
+                disabled={habits.findIndex((item) => item.id === habit.id) === 0}
+                className="rounded-lg bg-gray-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-gray-600 dark:hover:bg-gray-500"
+              >
+                ↑
+              </button>
+              <button
+                onClick={() => moveHabit(habit.id, 1)}
+                disabled={habits.findIndex((item) => item.id === habit.id) === habits.length - 1}
+                className="rounded-lg bg-gray-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-gray-600 dark:hover:bg-gray-500"
+              >
+                ↓
+              </button>
               <button
                 onClick={() => setEditingId(habit.id)}
                 className="rounded-lg bg-blue-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700"
