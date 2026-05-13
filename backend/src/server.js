@@ -15,6 +15,28 @@ const DEMO_USER_EMAIL = process.env.DEMO_USER_EMAIL || 'demo@habittracker.local'
 const DEMO_USER_USERNAME = process.env.DEMO_USER_USERNAME || 'Demo User';
 const DEMO_USER_PASSWORD = process.env.DEMO_USER_PASSWORD || 'DemoUser123!';
 
+// CORS Configuration - Allow frontend domain(s)
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:5173',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
 async function ensureDemoUser() {
   const { data: usersResponse, error: listError } = await supabaseAdmin.auth.admin.listUsers();
 
@@ -79,7 +101,7 @@ async function ensureDemoUser() {
 }
 
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Routes
